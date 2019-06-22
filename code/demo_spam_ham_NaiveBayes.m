@@ -19,10 +19,10 @@ if (exist(filepath, 'file'))
 end
 diary (filepath);
 
-spamTrainDir = '../../LingspamDataset/spam-train/';
-hamTrainDir = '../../LingspamDataset/nonspam-train/';
-spamTestDir = '../../LingspamDataset/spam-test/';
-hamTestDir = '../../LingspamDataset/nonspam-test/';
+spamTrainDir = '../LingspamDataset/spam-train/';
+hamTrainDir = '../LingspamDataset/nonspam-train/';
+spamTestDir = '../LingspamDataset/spam-test/';
+hamTestDir = '../LingspamDataset/nonspam-test/';
 featureDictionaryDir = '../feature_dictionary.txt';
 %featureDictionaryDir = '../feature_dictionary_100_tokens/feature_dictionary.txt';
 
