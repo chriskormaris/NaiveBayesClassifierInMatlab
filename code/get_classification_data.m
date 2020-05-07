@@ -5,7 +5,6 @@ function [ X ] = get_classification_data( files_dir, filenames, feature_tokens, 
 
     N = length(filenames);
     D = length(feature_tokens);
-    % stop_words = stopWords('Language', 'en');
 
     % classification parameter X
     X = zeros(N, D);

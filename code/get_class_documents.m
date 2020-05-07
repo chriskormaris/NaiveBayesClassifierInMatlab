@@ -5,7 +5,6 @@ function [ class_documents ] = get_class_documents( files_dir, filenames )
 
     N = length(filenames);
     class_documents = strings(N, 1);
-    % stop_words = stopWords('Language', 'en');
 
     % reading files
     for i = 1:N
@@ -21,8 +20,6 @@ function [ class_documents ] = get_class_documents( files_dir, filenames )
         else
             text = read_file(strcat(files_dir, strrep(filenames(i, :), ' ', '')));  % call "strrep" to remove whitespaces
         end
-
-        % text = removeStopWords(text);
 
         class_documents(i) = text;
     end
