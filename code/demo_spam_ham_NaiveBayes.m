@@ -1,10 +1,4 @@
-% DEMO OF 2 CLASS CLASSIFICATION USING A NAIVE-BAYES CLASSIFIER A SPAM-HAM DATASET
-clc; clear; close all; diary off;
-format long;
-
-isOctave = exist('OCTAVE_VERSION', 'builtin') ~= 0;
-
-rand('state', 0);
+clc; diary off;
 
 % add path
 addpath('../code')
@@ -19,83 +13,75 @@ if (exist(filepath, 'file'))
 end
 diary (filepath);
 
-spamTrainDir = '../LingspamDataset/spam-train/';
-hamTrainDir = '../LingspamDataset/nonspam-train/';
-spamTestDir = '../LingspamDataset/spam-test/';
-hamTestDir = '../LingspamDataset/nonspam-test/';
-featureDictionaryDir = '../feature_dictionary.txt';
-%featureDictionaryDir = '../feature_dictionary_100_tokens/feature_dictionary.txt';
+fprintf("Calculating feature token frequencies in SPAM files...\n")
+[token_frequencies_in_spam_class, spam_distinct_words, total_words_in_spam_class] = ...
+            calculate_token_frequencies_in_class(feature_tokens, spam_train_documents);
+fprintf('DONE\n');
 
-fprintf('Reading feature dictionary...\n');
-if isOctave,
-    fflush(stdout);  % only for Octave
-end
+fprintf("Calculating feature token frequencies in HAM files...\n")
+[token_frequencies_in_ham_class, ham_distinct_words, total_words_in_ham_class] = ...
+            calculate_token_frequencies_in_class(feature_tokens, ham_train_documents);
+fprintf('DONE\n');
 
-if ~isOctave,
-    feature_tokens = strsplit(read_file(featureDictionaryDir));  % for Matlab
-elseif isOctave,  
-    feature_tokens = strtok(read_file(featureDictionaryDir));  % for Octave
-end
+% FOR DEBUGGING
+% disp('token frequencies in spam class:');
+% token_frequencies_in_spam_class
+% disp('token frequencies in ham class:');
+% token_frequencies_in_ham_class
+% fprintf('\n');
 
-fprintf('\nReading TRAIN files...\n');
-if isOctave,
-    fflush(stdout);  % only for Octave
-end
+% spam_distinct_words  # 8373
+% ham_distinct_words  # 14144
+% fprintf('\n');
 
-spamTrainFiles = read_filenames(spamTrainDir);
-hamTrainFiles = read_filenames(hamTrainDir);
-spamTrainLabels = ones(length(spamTrainFiles), 1);
-hamTrainLabels = zeros(length(hamTrainFiles), 1);
-Y = [spamTrainLabels; hamTrainLabels];
-
-fprintf('\nReading TEST files...\n');
-if isOctave,
-    fflush(stdout);  % only for Octave
-end
-
-spamTestFiles = read_filenames(spamTestDir);
-hamTestFiles = read_filenames(hamTestDir);
-spamTestLabels = ones(length(spamTestFiles), 1);
-hamTestLabels = zeros(length(hamTestFiles), 1);
-YtestTrue = [spamTestLabels; hamTestLabels];
-
-D = length(feature_tokens);
-
-fprintf('\nConstructing the classification TRAIN and TEST data...\n');
-if isOctave,
-    fflush(stdout);  % only for Octave
-end
-
-XspamTrain = get_classification_data(spamTrainDir, spamTrainFiles, spamTrainLabels, feature_tokens, 'train');
-XhamTrain = get_classification_data(hamTrainDir, hamTrainFiles, hamTrainLabels, feature_tokens, 'train');
-XspamTest = get_classification_data(spamTestDir, spamTestFiles, spamTestLabels, feature_tokens, 'test');
-XhamTest = get_classification_data(hamTestDir, hamTestFiles, hamTestLabels, feature_tokens, 'test');
-
-X = [XspamTrain; XhamTrain];
-Xtest = [XspamTest; XhamTest];
-
-N = size(X, 1); % X: (NxD)
-Ntest = size(Xtest, 1);
-
-fprintf('\nLoading data done!\n');
-if isOctave,
-    fflush(stdout);  % only for Octave
-end
-
-fprintf('\n');
+distinct_words = [spam_distinct_words, ham_distinct_words];
+distinct_words = unique(distinct_words);
+V = length(distinct_words);  % 19100
 
 %% run Naive Bayes Classifier
 fprintf('\nRunning Naive-Bayes classifier...\n');
-if isOctave,
+if isOctave
     fflush(stdout);  % only for Octave
 end
 
-Ytest = naive_bayes(X, Y, Xtest);
+[Ytest, metrics] = naive_bayes(spam_class_probability, token_frequencies_in_spam_class, total_words_in_spam_class, ...
+                    ham_class_probability, token_frequencies_in_ham_class, total_words_in_ham_class, ...
+                    Xtest, YtestTrue, feature_tokens, V);
 
 fprintf('\n');
 
+accuracy = (Ntest - length(find(Ytest~=YtestTrue))) / Ntest;
+disp(['accuracy: ' num2str(accuracy * 100) ' %']);
+
 err = length(find(Ytest~=YtestTrue)) / Ntest;
-disp(['The error of the method is: ' num2str(err)]);
+disp(['The error of the method is: ' num2str(err * 100) ' %']);
+
+wrong_counter = metrics.wrong_counter;
+true_positives = metrics.true_positives;
+false_positives = metrics.false_positives;
+true_negatives = metrics.true_negatives;
+false_negatives = metrics.false_negatives;
+
+fprintf('number of wrong classifications:  %d out of %d files\n', wrong_counter, Ntest);
+fprintf('number of wrong spam classifications (false positives): %d out of %d files\n', false_positives, Ntest);
+fprintf('number of wrong ham classifications (false negatives): %d out of %d files\n', false_negatives, Ntest);
+
+fprintf('')
+    
+spam_precision = true_positives / (true_positives + false_positives) * 100;
+fprintf('precision for spam files: %f %%\n', spam_precision);
+ham_precision = true_negatives / (true_negatives + false_negatives) * 100;
+fprintf('precision for ham files: %f %%\n', ham_precision)
+
+spam_recall = true_positives / (true_positives + false_negatives) * 100;
+fprintf('recall for spam files: %f %%\n', spam_recall)
+ham_recall = true_negatives / (true_negatives + false_positives) * 100;
+fprintf('recall for ham files: %f %%\n', ham_recall)
+
+spam_f1_score = 2 * spam_precision * spam_recall / (spam_precision + spam_recall);
+fprintf('f1-score for spam files: %f %%\n', spam_f1_score)
+ham_f1_score = 2 * ham_precision * ham_recall / (ham_precision + ham_recall);
+fprintf('f1-score for ham files: %f %%\n', ham_f1_score)
 
 diary off
 
